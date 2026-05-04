@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["./index.ts", "./api.ts", "./src/**/*.ts"],
+  "exclude": [
+    "./**/*.test.ts",
+    "./vitest.config.ts",
+    "./dist/**",
+    "./node_modules/**",
+    "./upstream-snapshot/**"
+  ]
+}
