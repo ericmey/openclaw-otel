@@ -14,10 +14,5 @@
     "rootDir": "."
   },
   "include": ["./*.ts", "./src/**/*.ts"],
-  "exclude": [
-    "./**/*.test.ts",
-    "./dist/**",
-    "./node_modules/**",
-    "./upstream-snapshot/**"
-  ]
+  "exclude": ["./**/*.test.ts", "./dist/**", "./node_modules/**", "./upstream-snapshot/**"]
 }
