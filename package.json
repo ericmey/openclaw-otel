@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "OpenTelemetry exporter for OpenClaw — ships diagnostic events as OTel logs, metrics, and traces with field shapes that work cleanly in Grafana / LGTM stacks.",
   "license": "MIT",
-  "author": "Eric Mey <2865140+ericmey@users.noreply.github.com>",
+  "author": "Eric Mey <ericmey@gmail.com>",
   "homepage": "https://github.com/ericmey/openclaw-otel#readme",
   "bugs": {
     "url": "https://github.com/ericmey/openclaw-otel/issues"
@@ -88,5 +88,8 @@
       "publishToClawHub": false,
       "publishToNpm": false
     }
+  },
+  "overrides": {
+    "uuid": "^14"
   }
 }
