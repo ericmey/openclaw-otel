@@ -1,8 +1,8 @@
 # openclaw-otel — agent working notes
 
-This is the project file for Codex, the Aoi agent, or any other
-AI tool working in this repo. Short by design — read it once when you
-start, then move.
+This is the project file for Codex, Claude, or any other AI tool
+working in this repo. Short by design — read it once when you start,
+then move.
 
 ## What this project is
 
@@ -10,27 +10,30 @@ start, then move.
 subscribes to the OpenClaw plugin SDK's `onDiagnosticEvent` bus,
 translates events to OTel signals (logs, metrics, traces), and ships
 them to an OTLP/HTTP endpoint. Field shapes are tuned for clean
-ingestion into Grafana and LGTM-stack backends.
+ingestion into Grafana and LGTM-stack backends (Loki / Tempo / Mimir).
 
-The full design rationale lives in the harem-world vault at
-`wiki/services/observability/integration-baseline.md` and
-`wiki/services/observability/replacement-plugin-spec.md`. If you have
-access to that vault, read those first — they explain the *why* behind
-the field-shape choices in the code.
+The README has the full picture for end-users; this file is for
+contributors and AI agents.
 
 ## Development workflow
 
 ```bash
 npm install
-npm run typecheck   # tsc --noEmit
-npm test            # node --test with TS strip
+npm run typecheck       # tsc --noEmit
+npm run lint            # biome check
+npm test                # vitest run
+npm run test:coverage   # vitest run --coverage
+npm run build           # tsc -p tsconfig.build.json (emit dist/)
 ```
+
+CI runs lint + typecheck + tests on Node 22 and 24, plus a coverage
+job and a build job that smoke-tests the published tarball.
 
 The plugin is loaded by OpenClaw at runtime. To test changes against
 a real OpenClaw install:
 
 ```bash
-npm pack            # produces openclaw-otel-<version>.tgz
+npm pack            # runs prepack → emits dist/, produces openclaw-otel-<version>.tgz
 # on the openclaw host:
 cd ~/.openclaw/npm
 npm install /path/to/openclaw-otel-*.tgz
@@ -40,9 +43,14 @@ npm install /path/to/openclaw-otel-*.tgz
 ## Commit conventions
 
 - Conventional commits (`fix:`, `feat:`, `chore:`, etc.)
-- Reference audit findings as `(F1.6)`, `(F2.3)` etc. when applicable —
-  the audit doc lives in the vault and findings are stable IDs
-- Co-author Codex on AI-assisted commits per the repo's pattern
+- Reference issue numbers or finding IDs in commit messages when
+  applicable. The original development of this plugin tracked an
+  external audit in private docs; commits in this repo's history
+  reference those finding IDs (e.g. `fix(F1.6): ...`) — that
+  convention is intentional and convenient even if a given reader
+  doesn't have access to the source audit.
+- Co-author the assisting AI on AI-generated commits per
+  conventional `Co-Authored-By:` trailers.
 
 ## Code conventions
 
@@ -50,18 +58,18 @@ npm install /path/to/openclaw-otel-*.tgz
 - The main runtime lives in `src/service.ts`. It's a single large
   file — don't split it without good reason. The shape mirrors what
   OpenClaw expects from a plugin service.
-- Test files alongside source as `*.test.ts`
+- Test files alongside source as `*.test.ts` (vitest mocks).
 - Helpers near the top of `service.ts`, main service factory near the
-  bottom
+  bottom.
 
-## How to add a new audit-finding fix
+## How to add a fix
 
 1. Locate the relevant code path (often the diagnostic-event handlers
    inside `createDiagnosticsOtelService` in `src/service.ts`).
-2. Add the fix, comment-tagged with the finding ID
-   (`// F1.X (audit fix): ...`).
+2. Add the fix with a comment explaining the *why* (not the *what*).
 3. Update or add a test that asserts the fixed behavior.
-4. Commit with finding reference in the message.
+4. Verify `npm run lint`, `npm run typecheck`, `npm test`, and
+   `npm run build` all pass before committing.
 
 ## When in doubt
 

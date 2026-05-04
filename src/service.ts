@@ -697,10 +697,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       // path emits log records without host.name, so we explicitly set it
       // here from OTEL_RESOURCE_ATTRIBUTES env or fall back to os.hostname().
       //
-      // Codex review P2-2 (2026-05-04): no default for `deployment.environment`.
-      // Earlier this hardcoded "harem-world" — that's a private deployment
-      // name and shouldn't leak into a public plugin. If neither the
-      // env nor the consuming collector sets it, we omit it; the
+      // P2-2 (review fix, 2026-05-04): no default for `deployment.environment`.
+      // Earlier an internal-only deployment name was hardcoded as the
+      // fallback — a public plugin shouldn't bake in any specific
+      // environment name. If neither the env nor the consuming
+      // collector sets `deployment.environment`, we omit it; the
       // collector (or downstream OTel pipeline) can fill in.
       //
       // Codex review P2-3 (2026-05-04): env attrs are spread FIRST so

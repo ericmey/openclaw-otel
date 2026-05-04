@@ -282,6 +282,35 @@ describe("diagnostics-otel service", () => {
     }
   });
 
+  test("bails before exporter init when internalDiagnostics.onEvent capability is missing", async () => {
+    // Codex review of PR #7: confirm the P2-5 fix actually short-circuits
+    // exporter initialization when the runtime doesn't expose the
+    // diagnostic-event subscription capability. Earlier this check
+    // happened ~1700 lines into start(), so SDK + exporters got
+    // constructed and started before the capability gate fired —
+    // resource leak on the error path.
+    const service = createDiagnosticsOtelService();
+    const ctx = createOtelContext(OTEL_TEST_ENDPOINT, {
+      traces: true,
+      metrics: true,
+      logs: true,
+    });
+    // Strip the capability the plugin needs.
+    ctx.internalDiagnostics = { emit: ctx.internalDiagnostics!.emit };
+
+    await service.start(ctx);
+
+    expect(ctx.logger.error).toHaveBeenCalledWith(
+      "diagnostics-otel: internal diagnostics capability unavailable",
+    );
+    expect(sdkStart).not.toHaveBeenCalled();
+    expect(traceExporterCtor).not.toHaveBeenCalled();
+    expect(metricExporterCtor).not.toHaveBeenCalled();
+    expect(logExporterCtor).not.toHaveBeenCalled();
+
+    await service.stop?.(ctx);
+  });
+
   test("records message-flow metrics and spans", async () => {
     const service = createDiagnosticsOtelService();
     const ctx = createOtelContext(OTEL_TEST_ENDPOINT, { traces: true, metrics: true, logs: true });
