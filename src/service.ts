@@ -614,7 +614,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
   };
 
   return {
-    id: "diagnostics-otel",
+    id: "openclaw-otel",
     async start(ctx) {
       await stopStarted();
 
@@ -632,7 +632,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       // initialized until the next stop() call, leaking resources on
       // an uncommon error path. Now: bail BEFORE any exporter setup.
       if (!ctx.internalDiagnostics?.onEvent) {
-        ctx.logger.error("diagnostics-otel: internal diagnostics capability unavailable");
+        ctx.logger.error("openclaw-otel: internal diagnostics capability unavailable");
         return;
       }
 
@@ -671,11 +671,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const protocol = otel.protocol ?? process.env.OTEL_EXPORTER_OTLP_PROTOCOL ?? "http/protobuf";
       if (protocol !== "http/protobuf") {
         emitForSignals(enabledSignals, {
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           status: "failure",
           reason: "unsupported_protocol",
         });
-        ctx.logger.warn(`diagnostics-otel: unsupported protocol ${protocol}`);
+        ctx.logger.warn(`openclaw-otel: unsupported protocol ${protocol}`);
         return;
       }
 
@@ -790,18 +790,18 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               ...(metricsEnabled ? (["metrics"] as const) : []),
             ],
             {
-              exporter: "diagnostics-otel",
+              exporter: "openclaw-otel",
               status: "failure",
               reason: "start_failed",
               errorCategory: errorCategory(err),
             },
           );
           await stopStarted();
-          ctx.logger.error(`diagnostics-otel: failed to start SDK: ${formatError(err)}`);
+          ctx.logger.error(`openclaw-otel: failed to start SDK: ${formatError(err)}`);
           throw err;
         }
       } else if (sdkPreloaded && (tracesEnabled || metricsEnabled)) {
-        ctx.logger.info("diagnostics-otel: using preloaded OpenTelemetry SDK");
+        ctx.logger.info("openclaw-otel: using preloaded OpenTelemetry SDK");
       }
 
       const logSeverityMap: Record<string, SeverityNumber> = {
@@ -1203,7 +1203,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
             otelLogger.emit(logRecord);
           } catch (err) {
             emitExporterEvent({
-              exporter: "diagnostics-otel",
+              exporter: "openclaw-otel",
               signal: "logs",
               status: "failure",
               reason: "emit_failed",
@@ -1215,7 +1215,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               LOG_RECORD_EXPORT_FAILURE_REPORT_INTERVAL_MS
             ) {
               logRecordExportFailureLastReportedAt = now;
-              ctx.logger.error(`diagnostics-otel: log record export failed: ${formatError(err)}`);
+              ctx.logger.error(`openclaw-otel: log record export failed: ${formatError(err)}`);
             }
           }
         };
@@ -2509,19 +2509,19 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           }
         } catch (err) {
           ctx.logger.error(
-            `diagnostics-otel: event handler failed (${evt.type}): ${formatError(err)}`,
+            `openclaw-otel: event handler failed (${evt.type}): ${formatError(err)}`,
           );
         }
       });
 
       emitForSignals(enabledSignals, {
-        exporter: "diagnostics-otel",
+        exporter: "openclaw-otel",
         status: "started",
         reason: "configured",
       });
 
       if (logsEnabled) {
-        ctx.logger.info("diagnostics-otel: logs exporter enabled (OTLP/Protobuf)");
+        ctx.logger.info("openclaw-otel: logs exporter enabled (OTLP/Protobuf)");
       }
     },
     async stop() {

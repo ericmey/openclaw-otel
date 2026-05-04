@@ -138,7 +138,7 @@ import type { OpenClawPluginServiceContext } from "../api.js";
 import { emitDiagnosticEvent } from "../api.js";
 import { createDiagnosticsOtelService } from "./service.js";
 
-const OTEL_TEST_STATE_DIR = "/tmp/openclaw-diagnostics-otel-test";
+const OTEL_TEST_STATE_DIR = "/tmp/openclaw-otel-test";
 const OTEL_TEST_ENDPOINT = "http://otel-collector:4318";
 const OTEL_TEST_PROTOCOL = "http/protobuf";
 const TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736";
@@ -228,7 +228,7 @@ function flushDiagnosticEvents() {
   return new Promise<void>((resolve) => setImmediate(resolve));
 }
 
-describe("diagnostics-otel service", () => {
+describe("openclaw-otel service", () => {
   beforeEach(() => {
     resetDiagnosticEventsForTest();
     delete process.env.OPENCLAW_OTEL_PRELOADED;
@@ -301,7 +301,7 @@ describe("diagnostics-otel service", () => {
     await service.start(ctx);
 
     expect(ctx.logger.error).toHaveBeenCalledWith(
-      "diagnostics-otel: internal diagnostics capability unavailable",
+      "openclaw-otel: internal diagnostics capability unavailable",
     );
     expect(sdkStart).not.toHaveBeenCalled();
     expect(traceExporterCtor).not.toHaveBeenCalled();
@@ -425,7 +425,7 @@ describe("diagnostics-otel service", () => {
     expect(sdkStart).not.toHaveBeenCalled();
     expect(traceExporterCtor).not.toHaveBeenCalled();
     expect(ctx.logger.info).toHaveBeenCalledWith(
-      "diagnostics-otel: using preloaded OpenTelemetry SDK",
+      "openclaw-otel: using preloaded OpenTelemetry SDK",
     );
 
     emitDiagnosticEvent({
@@ -482,21 +482,21 @@ describe("diagnostics-otel service", () => {
       expect.arrayContaining([
         expect.objectContaining({
           type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           signal: "traces",
           status: "started",
           reason: "configured",
         }),
         expect.objectContaining({
           type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           signal: "metrics",
           status: "started",
           reason: "configured",
         }),
         expect.objectContaining({
           type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           signal: "logs",
           status: "started",
           reason: "configured",
@@ -506,7 +506,7 @@ describe("diagnostics-otel service", () => {
     expect(
       telemetryState.counters.get("openclaw.telemetry.exporter.events")?.add,
     ).toHaveBeenCalledWith(1, {
-      "openclaw.exporter": "diagnostics-otel",
+      "openclaw.exporter": "openclaw-otel",
       "openclaw.signal": "logs",
       "openclaw.status": "started",
       "openclaw.reason": "configured",
@@ -595,7 +595,7 @@ describe("diagnostics-otel service", () => {
       expect.arrayContaining([
         expect.objectContaining({
           type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           signal: "logs",
           status: "failure",
           reason: "emit_failed",
@@ -606,7 +606,7 @@ describe("diagnostics-otel service", () => {
     expect(
       telemetryState.counters.get("openclaw.telemetry.exporter.events")?.add,
     ).toHaveBeenCalledWith(1, {
-      "openclaw.exporter": "diagnostics-otel",
+      "openclaw.exporter": "openclaw-otel",
       "openclaw.signal": "logs",
       "openclaw.status": "failure",
       "openclaw.reason": "emit_failed",
