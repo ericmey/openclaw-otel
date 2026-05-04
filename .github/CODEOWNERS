@@ -1,0 +1,13 @@
+# CODEOWNERS — auto-requested reviewers for any PR.
+#
+# Lines below match path globs and assign owners. Owners are
+# auto-requested for review when a PR touches matching files.
+#
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo.
+* @ericmey
+
+# Workflow / CI changes — same owner today, broken out for future
+# delegation.
+/.github/ @ericmey
