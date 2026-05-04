@@ -1070,6 +1070,40 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               addTraceAttributes(attributes, evt.trace);
             }
 
+            // F1.7 (audit fix): inject trace_id + span_id on the log
+            // record whenever an active span is in scope at emission
+            // time. Upstream's only path was via metadata.trusted +
+            // logRecord.context, but most diagnostic events arrive
+            // outside trusted context, so logs produced inside a span
+            // had no trace correlation in Loki — defeats the
+            // tracesToLogsV2 datasource correlation entirely.
+            //
+            // We grab the active span from the OTel context API
+            // directly. If it has a valid trace_id (the all-zeros
+            // sentinel means "no span"), surface it as standard
+            // attributes that survive redactOtelAttributes (which only
+            // drops the openclaw.* prefixed forms).
+            //
+            // Wrapped in its own try/catch so a missing or partly-
+            // mocked context API in a test environment can't break
+            // the log emit path.
+            try {
+              const activeSpan = trace.getActiveSpan();
+              if (activeSpan) {
+                const spanCtx = activeSpan.spanContext();
+                if (
+                  spanCtx?.traceId &&
+                  spanCtx.traceId !== "00000000000000000000000000000000"
+                ) {
+                  assignOtelLogAttribute(attributes, "trace_id", spanCtx.traceId);
+                  assignOtelLogAttribute(attributes, "span_id", spanCtx.spanId);
+                }
+              }
+            } catch {
+              // active-span lookup unavailable — proceed without trace
+              // correlation rather than dropping the log entirely.
+            }
+
             const logRecord: LogRecord = {
               body: normalizeOtelLogString(evt.message || "log", MAX_OTEL_LOG_BODY_CHARS),
               severityText: logLevelName,
