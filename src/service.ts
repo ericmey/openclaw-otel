@@ -1335,13 +1335,13 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         },
       ) => {
         if (evt.provider) {
-          spanAttrs["openclaw.provider"] = evt.provider;
+          spanAttrs["openclaw.provider"] = lowCardinalityAttr(evt.provider, "unknown");
         }
         if (evt.model) {
-          spanAttrs["openclaw.model"] = evt.model;
+          spanAttrs["openclaw.model"] = lowCardinalityAttr(evt.model, "unknown");
         }
         if (evt.channel) {
-          spanAttrs["openclaw.channel"] = evt.channel;
+          spanAttrs["openclaw.channel"] = lowCardinalityAttr(evt.channel, "unknown");
         }
         if (evt.trigger) {
           spanAttrs["openclaw.trigger"] = evt.trigger;
@@ -1368,10 +1368,10 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.agent": lowCardinalityAttr(evt.agentId),
-          "openclaw.provider": evt.provider ?? "unknown",
-          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         const genAiAttrs: Record<string, string> = {
           "gen_ai.operation.name": "chat",
@@ -1465,7 +1465,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.received" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookReceivedCounter.add(1, attrs);
@@ -1475,7 +1475,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.processed" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         if (typeof evt.durationMs === "number") {
@@ -1496,7 +1496,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.error" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookErrorCounter.add(1, attrs);
@@ -1522,7 +1522,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.queued" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.source": evt.source ?? "unknown",
         };
         messageQueuedCounter.add(1, attrs);
@@ -1535,7 +1535,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.processed" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.outcome": evt.outcome ?? "unknown",
         };
         messageProcessedCounter.add(1, attrs);
@@ -1565,7 +1565,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const messageDeliveryAttrs = (
         evt: MessageDeliveryDiagnosticEvent,
       ): Record<string, string> => ({
-        "openclaw.channel": evt.channel,
+        "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
         "openclaw.delivery.kind": evt.deliveryKind,
       });
 
@@ -1789,11 +1789,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       ) => {
         const attrs: Record<string, string | number> = {
           "openclaw.outcome": evt.outcome,
-          "openclaw.provider": evt.provider ?? "unknown",
-          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         if (evt.channel) {
-          attrs["openclaw.channel"] = evt.channel;
+          attrs["openclaw.channel"] = lowCardinalityAttr(evt.channel, "unknown");
         }
         durationHistogram.record(evt.durationMs, attrs);
         if (!tracesEnabled) {
@@ -1969,8 +1969,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       };
 
       const modelCallMetricAttrs = (evt: ModelCallLifecycleDiagnosticEvent) => ({
-        "openclaw.provider": evt.provider,
-        "openclaw.model": evt.model,
+        "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+        "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         "openclaw.api": lowCardinalityAttr(evt.api),
         "openclaw.transport": lowCardinalityAttr(evt.transport),
       });
@@ -2009,8 +2009,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         assignGenAiModelCallAttrs(spanAttrs, evt);
         if (evt.api) {
@@ -2044,8 +2044,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         assignGenAiModelCallAttrs(spanAttrs, evt);
         if (evt.api) {
@@ -2093,8 +2093,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
           "openclaw.errorCategory": errorType,
           "error.type": errorType,
         };
@@ -2141,8 +2141,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           }
         >,
       ): Record<string, string | number | boolean> => ({
-        "openclaw.toolName": evt.toolName,
-        "gen_ai.tool.name": evt.toolName,
+        "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
+        "gen_ai.tool.name": lowCardinalityAttr(evt.toolName, "unknown"),
         ...paramsSummaryAttrs(evt.paramsSummary),
       });
 
@@ -2168,7 +2168,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.toolName": evt.toolName,
+          "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
           ...paramsSummaryAttrs(evt.paramsSummary),
         };
         toolExecutionDurationHistogram.record(evt.durationMs, attrs);
@@ -2199,7 +2199,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.toolName": evt.toolName,
+          "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
           "openclaw.errorCategory": lowCardinalityAttr(evt.errorCategory, "other"),
           ...paramsSummaryAttrs(evt.paramsSummary),
         };
