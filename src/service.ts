@@ -624,6 +624,18 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         return;
       }
 
+      // Codex review P2-5 (2026-05-04): check the capability we depend
+      // on BEFORE initializing exporter SDKs. Earlier this check
+      // happened ~1700 lines later, after NodeSDK.start() and
+      // LoggerProvider creation. If the capability was unavailable,
+      // we'd log an error and return — but the exporters would stay
+      // initialized until the next stop() call, leaking resources on
+      // an uncommon error path. Now: bail BEFORE any exporter setup.
+      if (!ctx.internalDiagnostics?.onEvent) {
+        ctx.logger.error("diagnostics-otel: internal diagnostics capability unavailable");
+        return;
+      }
+
       const emitExporterEvent = (
         event: Omit<TelemetryExporterDiagnosticEvent, "type" | "seq" | "ts">,
       ) => {
@@ -2371,11 +2383,12 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         });
       };
 
-      const subscribe = ctx.internalDiagnostics?.onEvent;
-      if (!subscribe) {
-        ctx.logger.error("diagnostics-otel: internal diagnostics capability unavailable");
-        return;
-      }
+      // Capability presence already verified at start() entrance per
+      // Codex P2-5 fix; the non-null assertion below is safe because
+      // we'd have returned earlier if internalDiagnostics?.onEvent
+      // was missing. If the runtime ever swaps capabilities mid-flight
+      // we'd notice it via emitDiagnosticEvent error paths elsewhere.
+      const subscribe = ctx.internalDiagnostics!.onEvent!;
 
       unsubscribe = subscribe((evt: DiagnosticEventPayload, metadata: DiagnosticEventMetadata) => {
         try {
