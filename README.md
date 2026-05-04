@@ -1,37 +1,27 @@
 # openclaw-otel
 
-OpenClaw OpenTelemetry exporter — fork of [`@openclaw/diagnostics-otel`](https://github.com/openclaw/openclaw) with field-mapping fixes for Grafana / LGTM-stack consumers.
+OpenTelemetry exporter for OpenClaw. Ships diagnostic events from the OpenClaw runtime as OTel logs, metrics, and traces, with field shapes that work cleanly in Grafana and the broader LGTM (Loki / Tempo / Mimir) stack.
 
-## Why this fork exists
+## What it does
 
-The upstream `@openclaw/diagnostics-otel` plugin works, but a thorough audit (see "integration baseline" doc in the harem-world vault) identified field-mapping issues that block several common Grafana workflows:
+OpenClaw exposes a typed plugin API including a diagnostic event bus (`onDiagnosticEvent`). This plugin subscribes to that bus and emits the events as standard OpenTelemetry signals to an OTLP/HTTP endpoint.
 
-- No `host.name` on log records (only on metrics) — cross-host log queries silently produce wrong results
-- `code_function` always reports the OTel plumbing, not the real caller frame
-- Double-suffix metric names (`_ms_milliseconds`)
-- Redundant `openclaw_log_level` alongside the OTel-canonical `severity_text`
-- No `trace_id` / `span_id` on log records, even when emitted inside a traced operation — defeats `tracesToLogsV2` correlation
-- High-cardinality `process.pid`, `process.command_args`, `process.executable_path`, `host.id` auto-promoted to metric labels — series multiply on every restart
+You get:
 
-This fork addresses each of those without otherwise changing behavior.
+- **Logs** with proper `severity_text` / `severity_number` per OTel spec, `host.name` and `service.name` populated, and trace context (`trace_id` / `span_id`) injected automatically when the log is emitted inside an active span.
+- **Metrics** following OTel semantic conventions — `_total` for counters, `_milliseconds` / `_seconds` / `_bytes` for unit-bearing metrics, no double-suffixed names, no high-cardinality auto-injected process labels.
+- **Traces** with W3C trace context propagation across operations, span names following `<namespace>.<operation>` convention.
 
-## Status
+The data lands in your collector / backend with the labels Grafana expects out of the box — Log Levels dropdown populates, `tracesToLogsV2` correlation works, service-graph view shows real edges.
 
-**v0.1.0 — parity ingest.** Source is identical to `@openclaw/diagnostics-otel@2026.5.2` except for:
-- Repackaged as standalone npm package `openclaw-otel` (no workspace dependency)
-- Plugin id renamed `diagnostics-otel` → `openclaw-otel` so both plugins can be installed simultaneously during cutover
-
-No behavior changes yet. Audit fixes land as discrete commits in the v0.2.0 sequence.
-
-## Install (local file install for testing)
+## Install
 
 ```bash
-# in the openclaw npm workspace on your host:
-cd ~/.openclaw/npm
-npm install /path/to/openclaw-otel/openclaw-otel-0.1.0.tgz
+# In your OpenClaw npm workspace (typically ~/.openclaw/npm/):
+npm install openclaw-otel
 ```
 
-Then enable in `~/.openclaw/openclaw.json`:
+Enable in `openclaw.json`:
 
 ```json
 {
@@ -43,23 +33,58 @@ Then enable in `~/.openclaw/openclaw.json`:
 }
 ```
 
-## Cutover from `@openclaw/diagnostics-otel`
+Hot-reload OpenClaw or restart the gateway. The plugin discovers the OTLP endpoint from standard environment variables.
 
-When the audit fixes have landed and you want to replace upstream:
+## Configuration
 
-```json
-{
-  "plugins": {
-    "entries": {
-      "diagnostics-otel": { "enabled": false },
-      "openclaw-otel": { "enabled": true }
-    }
-  }
-}
+Configure via environment variables (standard OTel conventions):
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP/HTTP endpoint | `http://collector.example.com:4318` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Override for traces only | `http://traces.example.com:4318/v1/traces` |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Override for metrics only | (similar) |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Override for logs only | (similar) |
+| `OTEL_SERVICE_NAME` | Service identity | `openclaw-prod-1` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Resource attributes (key=value, comma-separated) | `host.name=host01,deployment.environment=prod` |
+
+The plugin also respects the per-plugin `config` block in `openclaw.json` if you prefer config over env. See `openclaw.plugin.json` for the schema.
+
+## Requirements
+
+- Node.js 22.0 or newer
+- OpenClaw 2026.5.3 or newer (peer dependency)
+
+## Field shape reference
+
+Logs ship to your backend with at minimum:
+
+- `service.name` — your configured service identity
+- `service.version` — populated from `OTEL_RESOURCE_ATTRIBUTES` if set
+- `host.name` — derived from `OTEL_RESOURCE_ATTRIBUTES`, falling back to `os.hostname()`
+- `deployment.environment` — from `OTEL_RESOURCE_ATTRIBUTES`, default left to your collector
+- `severity_text` (uppercase: `INFO` / `WARN` / `ERROR`) and `severity_number` (OTel-canonical: 9 / 13 / 17)
+- `trace_id` and `span_id` when emitted within an active span scope
+- `code.function` and `code.lineno` reflecting the actual call site
+
+Metrics ship with:
+
+- `service.name`, `service.version`, `host.name`, `deployment.environment` as the resource scope
+- No `process.pid`, `process.command_args`, `process.executable_path`, or `host.id` — these are deliberately not promoted to labels (they multiply series on every restart)
+- Unit-suffixed names where applicable (`_milliseconds`, `_seconds`, `_bytes`) without source-side double-suffixes
+
+Traces ship with W3C trace context preserved across child spans and outbound RPCs.
+
+## Development
+
+```bash
+npm install
+npm run typecheck
+npm test
 ```
 
-Hot-reload openclaw. Verify your Grafana dashboards keep populating.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full development guide and [`CLAUDE.md`](./CLAUDE.md) for conventions when working with this repo via Claude Code or other AI agents.
 
 ## License
 
-MIT — same as upstream. See LICENSE.
+MIT — see [`LICENSE`](./LICENSE).
