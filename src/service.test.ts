@@ -329,19 +329,13 @@ describe("diagnostics-otel service", () => {
     });
 
     expect(telemetryState.counters.get("openclaw.webhook.received")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("openclaw.webhook.duration")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.webhook.duration")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.message.queued")?.add).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.message.processed")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("openclaw.message.duration")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.message.duration")?.record).toHaveBeenCalled();
     expect(telemetryState.histograms.get("openclaw.queue.wait")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.session.stuck")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("openclaw.session.stuck_age")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.session.stuck_age")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.run.attempt")?.add).toHaveBeenCalled();
 
     const spanNames = telemetryState.tracer.startSpan.mock.calls.map((call) => call[0]);
@@ -1408,9 +1402,7 @@ describe("diagnostics-otel service", () => {
         "openclaw.runId": expect.anything(),
       }),
     );
-    expect(
-      telemetryState.histograms.get("openclaw.harness.duration")?.record,
-    ).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.harness.duration")?.record).toHaveBeenCalledWith(
       90,
       expect.objectContaining({
         "openclaw.harness.id": "codex",
@@ -1418,9 +1410,7 @@ describe("diagnostics-otel service", () => {
         "openclaw.outcome": "completed",
       }),
     );
-    expect(
-      telemetryState.histograms.get("openclaw.harness.duration")?.record,
-    ).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.harness.duration")?.record).toHaveBeenCalledWith(
       90,
       expect.not.objectContaining({
         "openclaw.runId": expect.anything(),

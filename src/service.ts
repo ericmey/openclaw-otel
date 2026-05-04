@@ -1,10 +1,10 @@
 import * as os from "node:os";
 import {
-  context as otelContextApi,
   metrics,
-  trace,
+  context as otelContextApi,
   SpanStatusCode,
   TraceFlags,
+  trace,
 } from "@opentelemetry/api";
 import type { LogRecord, SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-proto";
@@ -128,9 +128,7 @@ function normalizeEndpoint(endpoint?: string): string | undefined {
  * (e.g. `host.name=nyla,deployment.environment=harem-world` set in
  * openclaw's .env), we read the env var ourselves.
  */
-function parseOtelResourceAttributesEnv(
-  raw: string | undefined,
-): Record<string, string> {
+function parseOtelResourceAttributesEnv(raw: string | undefined): Record<string, string> {
   if (!raw) return {};
   const out: Record<string, string> = {};
   for (const pair of raw.split(",")) {
@@ -687,15 +685,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       // path emits log records without host.name, so we explicitly set it
       // here from OTEL_RESOURCE_ATTRIBUTES env (preserved by openclaw's
       // .env on nyla) or fall back to os.hostname().
-      const envResourceAttrs = parseOtelResourceAttributesEnv(
-        process.env.OTEL_RESOURCE_ATTRIBUTES,
-      );
+      const envResourceAttrs = parseOtelResourceAttributesEnv(process.env.OTEL_RESOURCE_ATTRIBUTES);
       const resource = resourceFromAttributes({
         [ATTR_SERVICE_NAME]: serviceName,
-        "host.name":
-          envResourceAttrs["host.name"] || os.hostname() || "unknown",
-        "deployment.environment":
-          envResourceAttrs["deployment.environment"] || "harem-world",
+        "host.name": envResourceAttrs["host.name"] || os.hostname() || "unknown",
+        "deployment.environment": envResourceAttrs["deployment.environment"] || "harem-world",
         // include any other explicit env-supplied attrs (e.g.
         // service.namespace, service.version) but not the ones we just
         // explicitly set above
@@ -823,14 +817,19 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Token usage by type",
       });
-      const genAiTokenUsageHistogram = createHistogramFromOptions(meter,"gen_ai.client.token.usage", {
-        unit: "{token}",
-        description: "Number of input and output tokens used by GenAI client operations",
-        advice: {
-          explicitBucketBoundaries: GEN_AI_TOKEN_USAGE_BUCKETS,
+      const genAiTokenUsageHistogram = createHistogramFromOptions(
+        meter,
+        "gen_ai.client.token.usage",
+        {
+          unit: "{token}",
+          description: "Number of input and output tokens used by GenAI client operations",
+          advice: {
+            explicitBucketBoundaries: GEN_AI_TOKEN_USAGE_BUCKETS,
+          },
         },
-      });
-      const genAiOperationDurationHistogram = createHistogramFromOptions(meter,
+      );
+      const genAiOperationDurationHistogram = createHistogramFromOptions(
+        meter,
         "gen_ai.client.operation.duration",
         {
           unit: "s",
@@ -844,15 +843,19 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Estimated model cost (USD)",
       });
-      const durationHistogram = createHistogramFromOptions(meter,"openclaw.run.duration_ms", {
+      const durationHistogram = createHistogramFromOptions(meter, "openclaw.run.duration_ms", {
         unit: "ms",
         description: "Agent run duration",
       });
-      const harnessDurationHistogram = createHistogramFromOptions(meter,"openclaw.harness.duration_ms", {
-        unit: "ms",
-        description: "Agent harness lifecycle duration",
-      });
-      const contextHistogram = createHistogramFromOptions(meter,"openclaw.context.tokens", {
+      const harnessDurationHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.harness.duration_ms",
+        {
+          unit: "ms",
+          description: "Agent harness lifecycle duration",
+        },
+      );
+      const contextHistogram = createHistogramFromOptions(meter, "openclaw.context.tokens", {
         unit: "1",
         description: "Context window size and usage",
       });
@@ -864,10 +867,14 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Webhook processing errors",
       });
-      const webhookDurationHistogram = createHistogramFromOptions(meter,"openclaw.webhook.duration_ms", {
-        unit: "ms",
-        description: "Webhook processing duration",
-      });
+      const webhookDurationHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.webhook.duration_ms",
+        {
+          unit: "ms",
+          description: "Webhook processing duration",
+        },
+      );
       const messageQueuedCounter = meter.createCounter("openclaw.message.queued", {
         unit: "1",
         description: "Messages queued for processing",
@@ -876,10 +883,14 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Messages processed by outcome",
       });
-      const messageDurationHistogram = createHistogramFromOptions(meter,"openclaw.message.duration_ms", {
-        unit: "ms",
-        description: "Message processing duration",
-      });
+      const messageDurationHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.message.duration_ms",
+        {
+          unit: "ms",
+          description: "Message processing duration",
+        },
+      );
       const messageDeliveryStartedCounter = meter.createCounter(
         "openclaw.message.delivery.started",
         {
@@ -887,18 +898,19 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           description: "Outbound message delivery attempts started",
         },
       );
-      const messageDeliveryDurationHistogram = createHistogramFromOptions(meter,
+      const messageDeliveryDurationHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.message.delivery.duration_ms",
         {
           unit: "ms",
           description: "Outbound message delivery duration",
         },
       );
-      const queueDepthHistogram = createHistogramFromOptions(meter,"openclaw.queue.depth", {
+      const queueDepthHistogram = createHistogramFromOptions(meter, "openclaw.queue.depth", {
         unit: "1",
         description: "Queue depth on enqueue/dequeue",
       });
-      const queueWaitHistogram = createHistogramFromOptions(meter,"openclaw.queue.wait_ms", {
+      const queueWaitHistogram = createHistogramFromOptions(meter, "openclaw.queue.wait_ms", {
         unit: "ms",
         description: "Queue wait time before execution",
       });
@@ -918,10 +930,14 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Sessions stuck in processing",
       });
-      const sessionStuckAgeHistogram = createHistogramFromOptions(meter,"openclaw.session.stuck_age_ms", {
-        unit: "ms",
-        description: "Age of stuck sessions",
-      });
+      const sessionStuckAgeHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.session.stuck_age_ms",
+        {
+          unit: "ms",
+          description: "Age of stuck sessions",
+        },
+      );
       const runAttemptCounter = meter.createCounter("openclaw.run.attempt", {
         unit: "1",
         description: "Run attempts",
@@ -930,59 +946,84 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Detected repetitive tool-call loop events",
       });
-      const modelCallDurationHistogram = createHistogramFromOptions(meter,"openclaw.model_call.duration_ms", {
-        unit: "ms",
-        description: "Model call duration",
-      });
-      const modelCallRequestBytesHistogram = createHistogramFromOptions(meter,
+      const modelCallDurationHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.model_call.duration_ms",
+        {
+          unit: "ms",
+          description: "Model call duration",
+        },
+      );
+      const modelCallRequestBytesHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.model_call.request_bytes",
         {
           unit: "By",
           description: "UTF-8 byte size of sanitized model request payloads",
         },
       );
-      const modelCallResponseBytesHistogram = createHistogramFromOptions(meter,
+      const modelCallResponseBytesHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.model_call.response_bytes",
         {
           unit: "By",
           description: "UTF-8 byte size of streamed model response events",
         },
       );
-      const modelCallTimeToFirstByteHistogram = createHistogramFromOptions(meter,
+      const modelCallTimeToFirstByteHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.model_call.time_to_first_byte_ms",
         {
           unit: "ms",
           description: "Elapsed time before the first streamed model response event",
         },
       );
-      const toolExecutionDurationHistogram = createHistogramFromOptions(meter,
+      const toolExecutionDurationHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.tool.execution.duration_ms",
         {
           unit: "ms",
           description: "Tool execution duration",
         },
       );
-      const execProcessDurationHistogram = createHistogramFromOptions(meter,"openclaw.exec.duration_ms", {
-        unit: "ms",
-        description: "Exec process duration",
-      });
-      const memoryRssHistogram = createHistogramFromOptions(meter,"openclaw.memory.rss_bytes", {
+      const execProcessDurationHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.exec.duration_ms",
+        {
+          unit: "ms",
+          description: "Exec process duration",
+        },
+      );
+      const memoryRssHistogram = createHistogramFromOptions(meter, "openclaw.memory.rss_bytes", {
         unit: "By",
         description: "Resident set size reported by diagnostic memory samples",
       });
-      const memoryHeapUsedHistogram = createHistogramFromOptions(meter,"openclaw.memory.heap_used_bytes", {
-        unit: "By",
-        description: "Heap used bytes reported by diagnostic memory samples",
-      });
-      const memoryHeapTotalHistogram = createHistogramFromOptions(meter,"openclaw.memory.heap_total_bytes", {
-        unit: "By",
-        description: "Heap total bytes reported by diagnostic memory samples",
-      });
-      const memoryExternalHistogram = createHistogramFromOptions(meter,"openclaw.memory.external_bytes", {
-        unit: "By",
-        description: "External memory bytes reported by diagnostic memory samples",
-      });
-      const memoryArrayBuffersHistogram = createHistogramFromOptions(meter,
+      const memoryHeapUsedHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.memory.heap_used_bytes",
+        {
+          unit: "By",
+          description: "Heap used bytes reported by diagnostic memory samples",
+        },
+      );
+      const memoryHeapTotalHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.memory.heap_total_bytes",
+        {
+          unit: "By",
+          description: "Heap total bytes reported by diagnostic memory samples",
+        },
+      );
+      const memoryExternalHistogram = createHistogramFromOptions(
+        meter,
+        "openclaw.memory.external_bytes",
+        {
+          unit: "By",
+          description: "External memory bytes reported by diagnostic memory samples",
+        },
+      );
+      const memoryArrayBuffersHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.memory.array_buffers_bytes",
         {
           unit: "By",
@@ -997,28 +1038,32 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Diagnostic liveness warning events",
       });
-      const livenessEventLoopDelayP99Histogram = createHistogramFromOptions(meter,
+      const livenessEventLoopDelayP99Histogram = createHistogramFromOptions(
+        meter,
         "openclaw.liveness.event_loop_delay_p99_ms",
         {
           unit: "ms",
           description: "P99 event-loop delay reported by diagnostic liveness warnings",
         },
       );
-      const livenessEventLoopDelayMaxHistogram = createHistogramFromOptions(meter,
+      const livenessEventLoopDelayMaxHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.liveness.event_loop_delay_max_ms",
         {
           unit: "ms",
           description: "Maximum event-loop delay reported by diagnostic liveness warnings",
         },
       );
-      const livenessEventLoopUtilizationHistogram = createHistogramFromOptions(meter,
+      const livenessEventLoopUtilizationHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.liveness.event_loop_utilization",
         {
           unit: "1",
           description: "Event-loop utilization reported by diagnostic liveness warnings",
         },
       );
-      const livenessCpuCoreRatioHistogram = createHistogramFromOptions(meter,
+      const livenessCpuCoreRatioHistogram = createHistogramFromOptions(
+        meter,
         "openclaw.liveness.cpu_core_ratio",
         {
           unit: "1",
@@ -1113,10 +1158,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               const activeSpan = trace.getActiveSpan();
               if (activeSpan) {
                 const spanCtx = activeSpan.spanContext();
-                if (
-                  spanCtx?.traceId &&
-                  spanCtx.traceId !== "00000000000000000000000000000000"
-                ) {
+                if (spanCtx?.traceId && spanCtx.traceId !== "00000000000000000000000000000000") {
                   assignOtelLogAttribute(attributes, "trace_id", spanCtx.traceId);
                   assignOtelLogAttribute(attributes, "span_id", spanCtx.spanId);
                 }
