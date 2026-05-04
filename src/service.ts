@@ -130,6 +130,43 @@ function parseOtelResourceAttributesEnv(
   return out;
 }
 
+/**
+ * Normalize a metric name against its unit metadata to avoid double-suffixing.
+ *
+ * F1.5 (audit fix): the OTLP→Prometheus pipeline appends a unit-derived
+ * suffix to metric names — `_milliseconds` for unit `ms`. When the source
+ * name already ends with `_ms`, the result is the awkward
+ * `openclaw_run_duration_ms_milliseconds`. Strip the source suffix so the
+ * unit-derived one stands alone.
+ *
+ * `_bytes` + unit `By` is NOT double-suffixed by the exporter (the
+ * canonical mapping recognizes the suffix), so we don't touch it. Same
+ * reasoning for any future patterns — only normalize where the exporter
+ * actually produces a double.
+ */
+function normalizeHistogramName(name: string, unit: string | undefined): string {
+  if (unit === "ms" && name.endsWith("_ms")) {
+    return name.slice(0, -3);
+  }
+  return name;
+}
+
+/**
+ * Wrapper around the underlying meter's `createHistogram(...)` method that
+ * normalizes the metric name against its unit. Drop-in replacement at
+ * call sites; keeps the F1.5 fix in one place.
+ */
+type _Meter = ReturnType<typeof metrics.getMeter>;
+type _CreateHistogramArgs = Parameters<_Meter["createHistogram"]>;
+function createHistogramFromOptions(
+  meter: _Meter,
+  name: _CreateHistogramArgs[0],
+  options?: _CreateHistogramArgs[1],
+): ReturnType<_Meter["createHistogram"]> {
+  const m = meter as _Meter;
+  return m.createHistogram(normalizeHistogramName(name, options?.unit), options);
+}
+
 function resolveOtelUrl(endpoint: string | undefined, path: string): string | undefined {
   if (!endpoint) {
     return undefined;
@@ -773,14 +810,14 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Token usage by type",
       });
-      const genAiTokenUsageHistogram = meter.createHistogram("gen_ai.client.token.usage", {
+      const genAiTokenUsageHistogram = createHistogramFromOptions(meter,"gen_ai.client.token.usage", {
         unit: "{token}",
         description: "Number of input and output tokens used by GenAI client operations",
         advice: {
           explicitBucketBoundaries: GEN_AI_TOKEN_USAGE_BUCKETS,
         },
       });
-      const genAiOperationDurationHistogram = meter.createHistogram(
+      const genAiOperationDurationHistogram = createHistogramFromOptions(meter,
         "gen_ai.client.operation.duration",
         {
           unit: "s",
@@ -794,15 +831,15 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Estimated model cost (USD)",
       });
-      const durationHistogram = meter.createHistogram("openclaw.run.duration_ms", {
+      const durationHistogram = createHistogramFromOptions(meter,"openclaw.run.duration_ms", {
         unit: "ms",
         description: "Agent run duration",
       });
-      const harnessDurationHistogram = meter.createHistogram("openclaw.harness.duration_ms", {
+      const harnessDurationHistogram = createHistogramFromOptions(meter,"openclaw.harness.duration_ms", {
         unit: "ms",
         description: "Agent harness lifecycle duration",
       });
-      const contextHistogram = meter.createHistogram("openclaw.context.tokens", {
+      const contextHistogram = createHistogramFromOptions(meter,"openclaw.context.tokens", {
         unit: "1",
         description: "Context window size and usage",
       });
@@ -814,7 +851,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Webhook processing errors",
       });
-      const webhookDurationHistogram = meter.createHistogram("openclaw.webhook.duration_ms", {
+      const webhookDurationHistogram = createHistogramFromOptions(meter,"openclaw.webhook.duration_ms", {
         unit: "ms",
         description: "Webhook processing duration",
       });
@@ -826,7 +863,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Messages processed by outcome",
       });
-      const messageDurationHistogram = meter.createHistogram("openclaw.message.duration_ms", {
+      const messageDurationHistogram = createHistogramFromOptions(meter,"openclaw.message.duration_ms", {
         unit: "ms",
         description: "Message processing duration",
       });
@@ -837,18 +874,18 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           description: "Outbound message delivery attempts started",
         },
       );
-      const messageDeliveryDurationHistogram = meter.createHistogram(
+      const messageDeliveryDurationHistogram = createHistogramFromOptions(meter,
         "openclaw.message.delivery.duration_ms",
         {
           unit: "ms",
           description: "Outbound message delivery duration",
         },
       );
-      const queueDepthHistogram = meter.createHistogram("openclaw.queue.depth", {
+      const queueDepthHistogram = createHistogramFromOptions(meter,"openclaw.queue.depth", {
         unit: "1",
         description: "Queue depth on enqueue/dequeue",
       });
-      const queueWaitHistogram = meter.createHistogram("openclaw.queue.wait_ms", {
+      const queueWaitHistogram = createHistogramFromOptions(meter,"openclaw.queue.wait_ms", {
         unit: "ms",
         description: "Queue wait time before execution",
       });
@@ -868,7 +905,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Sessions stuck in processing",
       });
-      const sessionStuckAgeHistogram = meter.createHistogram("openclaw.session.stuck_age_ms", {
+      const sessionStuckAgeHistogram = createHistogramFromOptions(meter,"openclaw.session.stuck_age_ms", {
         unit: "ms",
         description: "Age of stuck sessions",
       });
@@ -880,59 +917,59 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Detected repetitive tool-call loop events",
       });
-      const modelCallDurationHistogram = meter.createHistogram("openclaw.model_call.duration_ms", {
+      const modelCallDurationHistogram = createHistogramFromOptions(meter,"openclaw.model_call.duration_ms", {
         unit: "ms",
         description: "Model call duration",
       });
-      const modelCallRequestBytesHistogram = meter.createHistogram(
+      const modelCallRequestBytesHistogram = createHistogramFromOptions(meter,
         "openclaw.model_call.request_bytes",
         {
           unit: "By",
           description: "UTF-8 byte size of sanitized model request payloads",
         },
       );
-      const modelCallResponseBytesHistogram = meter.createHistogram(
+      const modelCallResponseBytesHistogram = createHistogramFromOptions(meter,
         "openclaw.model_call.response_bytes",
         {
           unit: "By",
           description: "UTF-8 byte size of streamed model response events",
         },
       );
-      const modelCallTimeToFirstByteHistogram = meter.createHistogram(
+      const modelCallTimeToFirstByteHistogram = createHistogramFromOptions(meter,
         "openclaw.model_call.time_to_first_byte_ms",
         {
           unit: "ms",
           description: "Elapsed time before the first streamed model response event",
         },
       );
-      const toolExecutionDurationHistogram = meter.createHistogram(
+      const toolExecutionDurationHistogram = createHistogramFromOptions(meter,
         "openclaw.tool.execution.duration_ms",
         {
           unit: "ms",
           description: "Tool execution duration",
         },
       );
-      const execProcessDurationHistogram = meter.createHistogram("openclaw.exec.duration_ms", {
+      const execProcessDurationHistogram = createHistogramFromOptions(meter,"openclaw.exec.duration_ms", {
         unit: "ms",
         description: "Exec process duration",
       });
-      const memoryRssHistogram = meter.createHistogram("openclaw.memory.rss_bytes", {
+      const memoryRssHistogram = createHistogramFromOptions(meter,"openclaw.memory.rss_bytes", {
         unit: "By",
         description: "Resident set size reported by diagnostic memory samples",
       });
-      const memoryHeapUsedHistogram = meter.createHistogram("openclaw.memory.heap_used_bytes", {
+      const memoryHeapUsedHistogram = createHistogramFromOptions(meter,"openclaw.memory.heap_used_bytes", {
         unit: "By",
         description: "Heap used bytes reported by diagnostic memory samples",
       });
-      const memoryHeapTotalHistogram = meter.createHistogram("openclaw.memory.heap_total_bytes", {
+      const memoryHeapTotalHistogram = createHistogramFromOptions(meter,"openclaw.memory.heap_total_bytes", {
         unit: "By",
         description: "Heap total bytes reported by diagnostic memory samples",
       });
-      const memoryExternalHistogram = meter.createHistogram("openclaw.memory.external_bytes", {
+      const memoryExternalHistogram = createHistogramFromOptions(meter,"openclaw.memory.external_bytes", {
         unit: "By",
         description: "External memory bytes reported by diagnostic memory samples",
       });
-      const memoryArrayBuffersHistogram = meter.createHistogram(
+      const memoryArrayBuffersHistogram = createHistogramFromOptions(meter,
         "openclaw.memory.array_buffers_bytes",
         {
           unit: "By",
@@ -947,28 +984,28 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         unit: "1",
         description: "Diagnostic liveness warning events",
       });
-      const livenessEventLoopDelayP99Histogram = meter.createHistogram(
+      const livenessEventLoopDelayP99Histogram = createHistogramFromOptions(meter,
         "openclaw.liveness.event_loop_delay_p99_ms",
         {
           unit: "ms",
           description: "P99 event-loop delay reported by diagnostic liveness warnings",
         },
       );
-      const livenessEventLoopDelayMaxHistogram = meter.createHistogram(
+      const livenessEventLoopDelayMaxHistogram = createHistogramFromOptions(meter,
         "openclaw.liveness.event_loop_delay_max_ms",
         {
           unit: "ms",
           description: "Maximum event-loop delay reported by diagnostic liveness warnings",
         },
       );
-      const livenessEventLoopUtilizationHistogram = meter.createHistogram(
+      const livenessEventLoopUtilizationHistogram = createHistogramFromOptions(meter,
         "openclaw.liveness.event_loop_utilization",
         {
           unit: "1",
           description: "Event-loop utilization reported by diagnostic liveness warnings",
         },
       );
-      const livenessCpuCoreRatioHistogram = meter.createHistogram(
+      const livenessCpuCoreRatioHistogram = createHistogramFromOptions(meter,
         "openclaw.liveness.cpu_core_ratio",
         {
           unit: "1",

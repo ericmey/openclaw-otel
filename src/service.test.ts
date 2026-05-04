@@ -330,17 +330,17 @@ describe("diagnostics-otel service", () => {
 
     expect(telemetryState.counters.get("openclaw.webhook.received")?.add).toHaveBeenCalled();
     expect(
-      telemetryState.histograms.get("openclaw.webhook.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.webhook.duration")?.record,
     ).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.message.queued")?.add).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.message.processed")?.add).toHaveBeenCalled();
     expect(
-      telemetryState.histograms.get("openclaw.message.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.message.duration")?.record,
     ).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("openclaw.queue.wait_ms")?.record).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.queue.wait")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.session.stuck")?.add).toHaveBeenCalled();
     expect(
-      telemetryState.histograms.get("openclaw.session.stuck_age_ms")?.record,
+      telemetryState.histograms.get("openclaw.session.stuck_age")?.record,
     ).toHaveBeenCalled();
     expect(telemetryState.counters.get("openclaw.run.attempt")?.add).toHaveBeenCalled();
 
@@ -420,7 +420,7 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.run.duration")?.record).toHaveBeenCalledWith(
       100,
       expect.objectContaining({
         "openclaw.provider": "openai",
@@ -519,7 +519,7 @@ describe("diagnostics-otel service", () => {
       "openclaw.liveness.reason": "event_loop_delay:cpu",
     });
     expect(
-      telemetryState.histograms.get("openclaw.liveness.event_loop_delay_p99_ms")?.record,
+      telemetryState.histograms.get("openclaw.liveness.event_loop_delay_p99")?.record,
     ).toHaveBeenCalledWith(250, {
       "openclaw.liveness.reason": "event_loop_delay:cpu",
     });
@@ -632,7 +632,7 @@ describe("diagnostics-otel service", () => {
     await flushDiagnosticEvents();
 
     expect(sdkStart).not.toHaveBeenCalled();
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.run.duration")?.record).toHaveBeenCalledWith(
       100,
       expect.objectContaining({
         "openclaw.provider": "openai",
@@ -1359,7 +1359,7 @@ describe("diagnostics-otel service", () => {
     expect(toolCall?.[2]).toBeUndefined();
 
     expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.model_call.duration")?.record,
     ).toHaveBeenCalledWith(
       80,
       expect.objectContaining({
@@ -1386,7 +1386,7 @@ describe("diagnostics-otel service", () => {
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.model_call.time_to_first_byte_ms")?.record,
+      telemetryState.histograms.get("openclaw.model_call.time_to_first_byte")?.record,
     ).toHaveBeenCalledWith(
       45,
       expect.objectContaining({
@@ -1402,14 +1402,14 @@ describe("diagnostics-otel service", () => {
         "openclaw.model_call.time_to_first_byte_ms": 45,
       }),
     );
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.run.duration")?.record).toHaveBeenCalledWith(
       100,
       expect.not.objectContaining({
         "openclaw.runId": expect.anything(),
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.harness.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.harness.duration")?.record,
     ).toHaveBeenCalledWith(
       90,
       expect.objectContaining({
@@ -1419,7 +1419,7 @@ describe("diagnostics-otel service", () => {
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.harness.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.harness.duration")?.record,
     ).toHaveBeenCalledWith(
       90,
       expect.not.objectContaining({
@@ -1428,7 +1428,7 @@ describe("diagnostics-otel service", () => {
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.tool.execution.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.tool.execution.duration")?.record,
     ).toHaveBeenCalledWith(
       20,
       expect.not.objectContaining({
@@ -1605,7 +1605,7 @@ describe("diagnostics-otel service", () => {
       "openclaw.upstreamRequestIdHash": "sha256:123456abcdef",
     });
     expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.model_call.duration")?.record,
     ).toHaveBeenCalledWith(
       40,
       expect.objectContaining({
@@ -1613,7 +1613,7 @@ describe("diagnostics-otel service", () => {
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.model_call.duration")?.record,
     ).toHaveBeenCalledWith(
       40,
       expect.not.objectContaining({
@@ -2262,7 +2262,7 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.histograms.get("openclaw.exec.duration_ms")?.record).toHaveBeenCalledWith(
+    expect(telemetryState.histograms.get("openclaw.exec.duration")?.record).toHaveBeenCalledWith(
       30,
       expect.objectContaining({
         "openclaw.exec.target": "host",
@@ -2341,7 +2341,7 @@ describe("diagnostics-otel service", () => {
       "openclaw.delivery.kind": "text",
     });
     expect(
-      telemetryState.histograms.get("openclaw.message.delivery.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.message.delivery.duration")?.record,
     ).toHaveBeenCalledWith(
       25,
       expect.objectContaining({
@@ -2351,7 +2351,7 @@ describe("diagnostics-otel service", () => {
       }),
     );
     expect(
-      telemetryState.histograms.get("openclaw.message.delivery.duration_ms")?.record,
+      telemetryState.histograms.get("openclaw.message.delivery.duration")?.record,
     ).toHaveBeenCalledWith(
       40,
       expect.objectContaining({
