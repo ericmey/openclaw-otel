@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `trace_id` and `span_id` are now injected on log records whenever an active span is in scope at log emission time. Closes the gap that broke `tracesToLogsV2` correlation in Grafana.
 - Repository tooling: Biome (lint + format), Dependabot config, CodeQL workflow, GitHub issue and PR templates, expanded CI matrix covering Node 22 and 24.
+- `npm overrides` forcing `uuid` to `^14` (closes a Dependabot alert for `uuid <14` reachable transitively through `@anthropic-ai/vertex-sdk → google-auth-library → gaxios`). **Caveat:** npm `overrides` only apply when `openclaw-otel` is the *root* package being installed (e.g. for our local dev or CI). When this plugin is consumed as a dependency in an OpenClaw workspace, the workspace's own `package.json` controls dependency resolution and our override is ignored. The actual deployed environment still needs either (a) the same override applied at the workspace level, or (b) an upstream fix in the `gaxios → google-auth-library → @anthropic-ai/vertex-sdk → openclaw` chain. See [SECURITY.md](./SECURITY.md) for the full vulnerability-handling stance.
 
 ### Changed
 - Resource attributes are now built explicitly. The OpenTelemetry NodeSDK's automatic resource detection is disabled, which removes high-cardinality `process.pid`, `process.command_args`, `process.executable_path`, and `host.id` attributes that previously appeared on every metric.
