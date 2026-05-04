@@ -683,21 +683,29 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       // process.executable_path, host.id (hardware UUID) — restart-bombs
       // metric series and pumps cardinality. F1.2 also: openclaw's logger
       // path emits log records without host.name, so we explicitly set it
-      // here from OTEL_RESOURCE_ATTRIBUTES env (preserved by openclaw's
-      // .env on nyla) or fall back to os.hostname().
+      // here from OTEL_RESOURCE_ATTRIBUTES env or fall back to os.hostname().
+      //
+      // Codex review P2-2 (2026-05-04): no default for `deployment.environment`.
+      // Earlier this hardcoded "harem-world" — that's a private deployment
+      // name and shouldn't leak into a public plugin. If neither the
+      // env nor the consuming collector sets it, we omit it; the
+      // collector (or downstream OTel pipeline) can fill in.
+      //
+      // Codex review P2-3 (2026-05-04): env attrs are spread FIRST so
+      // explicit values win — matches OTel precedence (explicit
+      // service.name > OTEL_RESOURCE_ATTRIBUTES service.name). The
+      // earlier order spread env attrs last, which silently let
+      // OTEL_RESOURCE_ATTRIBUTES service.name clobber the explicit one.
       const envResourceAttrs = parseOtelResourceAttributesEnv(process.env.OTEL_RESOURCE_ATTRIBUTES);
       const resource = resourceFromAttributes({
+        // env-supplied attrs go first as defaults (any service.name,
+        // service.version, service.namespace, deployment.environment,
+        // host.name etc. from OTEL_RESOURCE_ATTRIBUTES) ...
+        ...envResourceAttrs,
+        // ... then explicit values override (these are the ones the
+        // plugin owns; OTel precedence puts these above env-attrs).
         [ATTR_SERVICE_NAME]: serviceName,
         "host.name": envResourceAttrs["host.name"] || os.hostname() || "unknown",
-        "deployment.environment": envResourceAttrs["deployment.environment"] || "harem-world",
-        // include any other explicit env-supplied attrs (e.g.
-        // service.namespace, service.version) but not the ones we just
-        // explicitly set above
-        ...Object.fromEntries(
-          Object.entries(envResourceAttrs).filter(
-            ([k]) => k !== "host.name" && k !== "deployment.environment",
-          ),
-        ),
       });
 
       const logUrl = resolveSignalOtelUrl({
