@@ -30,6 +30,19 @@ import {
 } from "../api.js";
 
 const DEFAULT_SERVICE_NAME = "openclaw";
+/**
+ * F1.3 (audit fix): function names that openclaw's diagnostic-event
+ * emitter passes as `evt.code.functionName` but that actually point to
+ * its own internal logger plumbing rather than the real caller frame.
+ * If we see one of these, drop both code.function AND code.lineno —
+ * better to have no caller info than misleading caller info.
+ *
+ * If openclaw upstream fixes the frame capture and starts emitting
+ * real caller names, those automatically pass through here without
+ * any change.
+ */
+const KNOWN_BAD_CODE_FUNCTION_NAMES = new Set(["logToFile"]);
+
 const DROPPED_OTEL_ATTRIBUTE_KEYS = new Set([
   "openclaw.callId",
   "openclaw.parentSpanId",
@@ -1060,11 +1073,20 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               );
             }
             assignOtelLogEventAttributes(attributes, evt.attributes);
-            if (evt.code?.line) {
-              assignOtelLogAttribute(attributes, "code.lineno", evt.code.line);
-            }
-            if (evt.code?.functionName) {
-              assignOtelLogAttribute(attributes, "code.function", evt.code.functionName);
+            // F1.3 (audit fix): drop code.function and code.lineno
+            // when the function name is one we know maps to openclaw's
+            // own logger internals rather than the actual caller. See
+            // KNOWN_BAD_CODE_FUNCTION_NAMES near the top.
+            const codeFunctionName = evt.code?.functionName;
+            const codeFunctionTrustworthy =
+              !!codeFunctionName && !KNOWN_BAD_CODE_FUNCTION_NAMES.has(codeFunctionName);
+            if (codeFunctionTrustworthy) {
+              if (evt.code?.line) {
+                assignOtelLogAttribute(attributes, "code.lineno", evt.code.line);
+              }
+              if (codeFunctionName) {
+                assignOtelLogAttribute(attributes, "code.function", codeFunctionName);
+              }
             }
             if (metadata.trusted) {
               addTraceAttributes(attributes, evt.trace);
