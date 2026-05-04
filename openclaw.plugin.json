@@ -1,0 +1,11 @@
+{
+  "id": "openclaw-otel",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

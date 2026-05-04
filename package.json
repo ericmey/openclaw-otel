@@ -1,0 +1,61 @@
+{
+  "name": "openclaw-otel",
+  "version": "0.1.0",
+  "description": "OpenClaw OpenTelemetry exporter — fork of @openclaw/diagnostics-otel with field-mapping fixes per the harem-world integration baseline audit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ericmey/openclaw-otel"
+  },
+  "type": "module",
+  "main": "./index.ts",
+  "files": [
+    "index.ts",
+    "api.ts",
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test --experimental-strip-types --no-warnings 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api-logs": "^0.216.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.216.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.216.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.216.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-logs": "^0.216.0",
+    "@opentelemetry/sdk-metrics": "^2.7.1",
+    "@opentelemetry/sdk-node": "^0.216.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "@opentelemetry/semantic-conventions": "^1.40.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.4.25"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "openclaw-otel",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.25"
+    },
+    "compat": {
+      "pluginApi": ">=2026.5.2"
+    },
+    "release": {
+      "publishToClawHub": false,
+      "publishToNpm": false
+    }
+  }
+}
