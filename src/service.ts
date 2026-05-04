@@ -953,7 +953,10 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
             const logLevelName = evt.level || "INFO";
             const severityNumber = logSeverityMap[logLevelName] ?? (9 as SeverityNumber);
             const attributes = Object.create(null) as Record<string, string | number | boolean>;
-            assignOtelLogAttribute(attributes, "openclaw.log.level", logLevelName);
+            // F1.6 (audit fix): redundant with severityText/severityNumber on the
+            // log record itself — Grafana's Log Levels dropdown reads the OTel
+            // canonical fields, so this duplicate attribute is noise.
+            // assignOtelLogAttribute(attributes, "openclaw.log.level", logLevelName);
             if (evt.loggerName) {
               assignOtelLogAttribute(attributes, "openclaw.logger", evt.loggerName);
             }
