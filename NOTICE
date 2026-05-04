@@ -1,6 +1,16 @@
-MIT License
-
+openclaw-otel
 Copyright (c) 2026 Eric Mey
+
+This project includes code originally derived from
+@openclaw/diagnostics-otel (https://github.com/openclaw/openclaw),
+Copyright (c) OpenClaw Contributors, licensed under the MIT License.
+The MIT terms below are reproduced as required by that license.
+
+---
+
+MIT License (for derived portions)
+
+Copyright (c) OpenClaw Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

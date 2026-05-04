@@ -1,5 +1,35 @@
+# Dependencies
 node_modules/
+
+# Build / dist artifacts
 dist/
+build/
 *.tgz
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS detritus
 .DS_Store
-upstream-snapshot/
+Thumbs.db
+
+# Log files
+*.log
+npm-debug.log*
+
+# Test output
+coverage/
+.nyc_output/
+
+# Temporary
+*.tmp
+*.bak
