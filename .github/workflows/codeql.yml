@@ -1,5 +1,10 @@
 name: codeql
 
+# Code scanning on private repos requires GitHub Advanced Security
+# (paid). Free on public repos. We gate the job on visibility so the
+# workflow auto-activates the moment this repo flips public, but
+# doesn't fail in the meantime.
+
 on:
   push:
     branches: [main]
@@ -17,6 +22,7 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    if: github.event.repository.visibility == 'public'
     strategy:
       fail-fast: false
       matrix:
