@@ -1,3 +1,4 @@
+import * as os from "node:os";
 import {
   context as otelContextApi,
   metrics,
@@ -101,6 +102,32 @@ const NO_CONTENT_CAPTURE: OtelContentCapturePolicy = {
 function normalizeEndpoint(endpoint?: string): string | undefined {
   const trimmed = endpoint?.trim();
   return trimmed ? trimmed.replace(/\/+$/, "") : undefined;
+}
+
+/**
+ * Parse the OTEL_RESOURCE_ATTRIBUTES env var into a key/value map.
+ * Format is `key1=value1,key2=value2` per OTel spec.
+ *
+ * Used by F1.4 fix: we disable NodeSDK's auto-resource-detection
+ * (which floods every metric with process.pid, process.command_args,
+ * process.executable_path, host.id — series multiply on restart) and
+ * build the resource explicitly. To preserve the env-supplied attrs
+ * (e.g. `host.name=nyla,deployment.environment=harem-world` set in
+ * openclaw's .env), we read the env var ourselves.
+ */
+function parseOtelResourceAttributesEnv(
+  raw: string | undefined,
+): Record<string, string> {
+  if (!raw) return {};
+  const out: Record<string, string> = {};
+  for (const pair of raw.split(",")) {
+    const idx = pair.indexOf("=");
+    if (idx < 1) continue;
+    const key = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    if (key && value) out[key] = value;
+  }
+  return out;
 }
 
 function resolveOtelUrl(endpoint: string | undefined, path: string): string | undefined {
@@ -602,8 +629,31 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const contentCapturePolicy = resolveContentCapturePolicy(otel.captureContent);
       const sdkPreloaded = hasPreloadedOtelSdk();
 
+      // F1.4 + F1.2 (audit fix): build the resource explicitly instead of
+      // letting NodeSDK auto-detect. Auto-detection adds process.pid,
+      // process.command_args (full argv as a label string!),
+      // process.executable_path, host.id (hardware UUID) — restart-bombs
+      // metric series and pumps cardinality. F1.2 also: openclaw's logger
+      // path emits log records without host.name, so we explicitly set it
+      // here from OTEL_RESOURCE_ATTRIBUTES env (preserved by openclaw's
+      // .env on nyla) or fall back to os.hostname().
+      const envResourceAttrs = parseOtelResourceAttributesEnv(
+        process.env.OTEL_RESOURCE_ATTRIBUTES,
+      );
       const resource = resourceFromAttributes({
         [ATTR_SERVICE_NAME]: serviceName,
+        "host.name":
+          envResourceAttrs["host.name"] || os.hostname() || "unknown",
+        "deployment.environment":
+          envResourceAttrs["deployment.environment"] || "harem-world",
+        // include any other explicit env-supplied attrs (e.g.
+        // service.namespace, service.version) but not the ones we just
+        // explicitly set above
+        ...Object.fromEntries(
+          Object.entries(envResourceAttrs).filter(
+            ([k]) => k !== "host.name" && k !== "deployment.environment",
+          ),
+        ),
       });
 
       const logUrl = resolveSignalOtelUrl({
@@ -650,6 +700,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
 
         sdk = new NodeSDK({
           resource,
+          // F1.4 (audit fix): disable default auto-detection. We build
+          // the resource explicitly above; default detectors would
+          // re-inject the high-cardinality process.* and host.id attrs
+          // we're trying to drop.
+          autoDetectResources: false,
           ...(traceExporter ? { traceExporter } : {}),
           ...(metricReader ? { metricReader } : {}),
           ...(sampleRate !== undefined
