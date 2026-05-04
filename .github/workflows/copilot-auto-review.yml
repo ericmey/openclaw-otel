@@ -1,0 +1,36 @@
+name: copilot-auto-review
+
+# Auto-request a code review from GitHub Copilot on every new PR.
+#
+# Preconditions (one-time, UI):
+#   Settings → Pull requests → "Allow Copilot to review pull requests"
+#   This installs the `copilot-pull-request-reviewer` org as a
+#   collaborator. Without it, this workflow's gh request fails (we
+#   tolerate that gracefully — see the `|| ...` fallback).
+#
+# Once installed, this workflow exists as code-as-config: forks and
+# clones automatically inherit the auto-review behavior; we don't
+# rely on the UI toggle staying set.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  request-copilot:
+    name: Request Copilot review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Request Copilot code review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-reviewer copilot-pull-request-reviewer \
+            || echo "::warning::Copilot is not installed as a reviewer on this repo. Enable in Settings → Pull requests → Allow Copilot to review pull requests."
