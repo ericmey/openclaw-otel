@@ -79,7 +79,7 @@
     "@opentelemetry/semantic-conventions": "^1.40.0"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.5.3"
+    "openclaw": ">=2026.5.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.14",
@@ -95,7 +95,7 @@
     "install": {
       "npmSpec": "openclaw-otel",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.5.3"
+      "minHostVersion": ">=2026.5.2"
     },
     "compat": {
       "pluginApi": ">=2026.5.2"
