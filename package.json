@@ -26,21 +26,37 @@
     "plugin"
   ],
   "type": "module",
-  "main": "./index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
+    }
+  },
   "files": [
-    "index.ts",
-    "api.ts",
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
     "openclaw.plugin.json",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "NOTICE",
+    "CHANGELOG.md",
+    "SECURITY.md"
   ],
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "prepack": "npm run clean && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -63,7 +79,7 @@
     "@opentelemetry/semantic-conventions": "^1.40.0"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.5.3"
+    "openclaw": ">=2026.5.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.14",
@@ -74,12 +90,12 @@
   },
   "openclaw": {
     "extensions": [
-      "./index.ts"
+      "./dist/index.js"
     ],
     "install": {
       "npmSpec": "openclaw-otel",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.5.3"
+      "minHostVersion": ">=2026.5.2"
     },
     "compat": {
       "pluginApi": ">=2026.5.2"

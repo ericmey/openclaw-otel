@@ -614,13 +614,25 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
   };
 
   return {
-    id: "diagnostics-otel",
+    id: "openclaw-otel",
     async start(ctx) {
       await stopStarted();
 
       const cfg = ctx.config.diagnostics;
       const otel = cfg?.otel;
       if (!cfg?.enabled || !otel?.enabled) {
+        return;
+      }
+
+      // Codex review P2-5 (2026-05-04): check the capability we depend
+      // on BEFORE initializing exporter SDKs. Earlier this check
+      // happened ~1700 lines later, after NodeSDK.start() and
+      // LoggerProvider creation. If the capability was unavailable,
+      // we'd log an error and return — but the exporters would stay
+      // initialized until the next stop() call, leaking resources on
+      // an uncommon error path. Now: bail BEFORE any exporter setup.
+      if (!ctx.internalDiagnostics?.onEvent) {
+        ctx.logger.error("openclaw-otel: internal diagnostics capability unavailable");
         return;
       }
 
@@ -659,11 +671,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const protocol = otel.protocol ?? process.env.OTEL_EXPORTER_OTLP_PROTOCOL ?? "http/protobuf";
       if (protocol !== "http/protobuf") {
         emitForSignals(enabledSignals, {
-          exporter: "diagnostics-otel",
+          exporter: "openclaw-otel",
           status: "failure",
           reason: "unsupported_protocol",
         });
-        ctx.logger.warn(`diagnostics-otel: unsupported protocol ${protocol}`);
+        ctx.logger.warn(`openclaw-otel: unsupported protocol ${protocol}`);
         return;
       }
 
@@ -683,21 +695,30 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       // process.executable_path, host.id (hardware UUID) — restart-bombs
       // metric series and pumps cardinality. F1.2 also: openclaw's logger
       // path emits log records without host.name, so we explicitly set it
-      // here from OTEL_RESOURCE_ATTRIBUTES env (preserved by openclaw's
-      // .env on nyla) or fall back to os.hostname().
+      // here from OTEL_RESOURCE_ATTRIBUTES env or fall back to os.hostname().
+      //
+      // P2-2 (review fix, 2026-05-04): no default for `deployment.environment`.
+      // Earlier an internal-only deployment name was hardcoded as the
+      // fallback — a public plugin shouldn't bake in any specific
+      // environment name. If neither the env nor the consuming
+      // collector sets `deployment.environment`, we omit it; the
+      // collector (or downstream OTel pipeline) can fill in.
+      //
+      // Codex review P2-3 (2026-05-04): env attrs are spread FIRST so
+      // explicit values win — matches OTel precedence (explicit
+      // service.name > OTEL_RESOURCE_ATTRIBUTES service.name). The
+      // earlier order spread env attrs last, which silently let
+      // OTEL_RESOURCE_ATTRIBUTES service.name clobber the explicit one.
       const envResourceAttrs = parseOtelResourceAttributesEnv(process.env.OTEL_RESOURCE_ATTRIBUTES);
       const resource = resourceFromAttributes({
+        // env-supplied attrs go first as defaults (any service.name,
+        // service.version, service.namespace, deployment.environment,
+        // host.name etc. from OTEL_RESOURCE_ATTRIBUTES) ...
+        ...envResourceAttrs,
+        // ... then explicit values override (these are the ones the
+        // plugin owns; OTel precedence puts these above env-attrs).
         [ATTR_SERVICE_NAME]: serviceName,
         "host.name": envResourceAttrs["host.name"] || os.hostname() || "unknown",
-        "deployment.environment": envResourceAttrs["deployment.environment"] || "harem-world",
-        // include any other explicit env-supplied attrs (e.g.
-        // service.namespace, service.version) but not the ones we just
-        // explicitly set above
-        ...Object.fromEntries(
-          Object.entries(envResourceAttrs).filter(
-            ([k]) => k !== "host.name" && k !== "deployment.environment",
-          ),
-        ),
       });
 
       const logUrl = resolveSignalOtelUrl({
@@ -769,18 +790,18 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               ...(metricsEnabled ? (["metrics"] as const) : []),
             ],
             {
-              exporter: "diagnostics-otel",
+              exporter: "openclaw-otel",
               status: "failure",
               reason: "start_failed",
               errorCategory: errorCategory(err),
             },
           );
           await stopStarted();
-          ctx.logger.error(`diagnostics-otel: failed to start SDK: ${formatError(err)}`);
+          ctx.logger.error(`openclaw-otel: failed to start SDK: ${formatError(err)}`);
           throw err;
         }
       } else if (sdkPreloaded && (tracesEnabled || metricsEnabled)) {
-        ctx.logger.info("diagnostics-otel: using preloaded OpenTelemetry SDK");
+        ctx.logger.info("openclaw-otel: using preloaded OpenTelemetry SDK");
       }
 
       const logSeverityMap: Record<string, SeverityNumber> = {
@@ -1182,7 +1203,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
             otelLogger.emit(logRecord);
           } catch (err) {
             emitExporterEvent({
-              exporter: "diagnostics-otel",
+              exporter: "openclaw-otel",
               signal: "logs",
               status: "failure",
               reason: "emit_failed",
@@ -1194,7 +1215,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
               LOG_RECORD_EXPORT_FAILURE_REPORT_INTERVAL_MS
             ) {
               logRecordExportFailureLastReportedAt = now;
-              ctx.logger.error(`diagnostics-otel: log record export failed: ${formatError(err)}`);
+              ctx.logger.error(`openclaw-otel: log record export failed: ${formatError(err)}`);
             }
           }
         };
@@ -1315,13 +1336,13 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         },
       ) => {
         if (evt.provider) {
-          spanAttrs["openclaw.provider"] = evt.provider;
+          spanAttrs["openclaw.provider"] = lowCardinalityAttr(evt.provider, "unknown");
         }
         if (evt.model) {
-          spanAttrs["openclaw.model"] = evt.model;
+          spanAttrs["openclaw.model"] = lowCardinalityAttr(evt.model, "unknown");
         }
         if (evt.channel) {
-          spanAttrs["openclaw.channel"] = evt.channel;
+          spanAttrs["openclaw.channel"] = lowCardinalityAttr(evt.channel, "unknown");
         }
         if (evt.trigger) {
           spanAttrs["openclaw.trigger"] = evt.trigger;
@@ -1348,10 +1369,10 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.agent": lowCardinalityAttr(evt.agentId),
-          "openclaw.provider": evt.provider ?? "unknown",
-          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         const genAiAttrs: Record<string, string> = {
           "gen_ai.operation.name": "chat",
@@ -1445,7 +1466,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.received" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookReceivedCounter.add(1, attrs);
@@ -1455,7 +1476,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.processed" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         if (typeof evt.durationMs === "number") {
@@ -1476,7 +1497,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.error" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookErrorCounter.add(1, attrs);
@@ -1502,7 +1523,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.queued" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.source": evt.source ?? "unknown",
         };
         messageQueuedCounter.add(1, attrs);
@@ -1515,7 +1536,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.processed" }>,
       ) => {
         const attrs = {
-          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
           "openclaw.outcome": evt.outcome ?? "unknown",
         };
         messageProcessedCounter.add(1, attrs);
@@ -1545,7 +1566,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       const messageDeliveryAttrs = (
         evt: MessageDeliveryDiagnosticEvent,
       ): Record<string, string> => ({
-        "openclaw.channel": evt.channel,
+        "openclaw.channel": lowCardinalityAttr(evt.channel, "unknown"),
         "openclaw.delivery.kind": evt.deliveryKind,
       });
 
@@ -1769,11 +1790,11 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       ) => {
         const attrs: Record<string, string | number> = {
           "openclaw.outcome": evt.outcome,
-          "openclaw.provider": evt.provider ?? "unknown",
-          "openclaw.model": evt.model ?? "unknown",
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         if (evt.channel) {
-          attrs["openclaw.channel"] = evt.channel;
+          attrs["openclaw.channel"] = lowCardinalityAttr(evt.channel, "unknown");
         }
         durationHistogram.record(evt.durationMs, attrs);
         if (!tracesEnabled) {
@@ -1949,8 +1970,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
       };
 
       const modelCallMetricAttrs = (evt: ModelCallLifecycleDiagnosticEvent) => ({
-        "openclaw.provider": evt.provider,
-        "openclaw.model": evt.model,
+        "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+        "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         "openclaw.api": lowCardinalityAttr(evt.api),
         "openclaw.transport": lowCardinalityAttr(evt.transport),
       });
@@ -1989,8 +2010,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         assignGenAiModelCallAttrs(spanAttrs, evt);
         if (evt.api) {
@@ -2024,8 +2045,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
         };
         assignGenAiModelCallAttrs(spanAttrs, evt);
         if (evt.api) {
@@ -2073,8 +2094,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           return;
         }
         const spanAttrs: Record<string, string | number | boolean> = {
-          "openclaw.provider": evt.provider,
-          "openclaw.model": evt.model,
+          "openclaw.provider": lowCardinalityAttr(evt.provider, "unknown"),
+          "openclaw.model": lowCardinalityAttr(evt.model, "unknown"),
           "openclaw.errorCategory": errorType,
           "error.type": errorType,
         };
@@ -2121,8 +2142,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           }
         >,
       ): Record<string, string | number | boolean> => ({
-        "openclaw.toolName": evt.toolName,
-        "gen_ai.tool.name": evt.toolName,
+        "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
+        "gen_ai.tool.name": lowCardinalityAttr(evt.toolName, "unknown"),
         ...paramsSummaryAttrs(evt.paramsSummary),
       });
 
@@ -2148,7 +2169,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.toolName": evt.toolName,
+          "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
           ...paramsSummaryAttrs(evt.paramsSummary),
         };
         toolExecutionDurationHistogram.record(evt.durationMs, attrs);
@@ -2179,7 +2200,7 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         metadata: DiagnosticEventMetadata,
       ) => {
         const attrs = {
-          "openclaw.toolName": evt.toolName,
+          "openclaw.toolName": lowCardinalityAttr(evt.toolName, "unknown"),
           "openclaw.errorCategory": lowCardinalityAttr(evt.errorCategory, "other"),
           ...paramsSummaryAttrs(evt.paramsSummary),
         };
@@ -2363,11 +2384,12 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
         });
       };
 
-      const subscribe = ctx.internalDiagnostics?.onEvent;
-      if (!subscribe) {
-        ctx.logger.error("diagnostics-otel: internal diagnostics capability unavailable");
-        return;
-      }
+      // Capability presence already verified at start() entrance per
+      // Codex P2-5 fix; the non-null assertion below is safe because
+      // we'd have returned earlier if internalDiagnostics?.onEvent
+      // was missing. If the runtime ever swaps capabilities mid-flight
+      // we'd notice it via emitDiagnosticEvent error paths elsewhere.
+      const subscribe = ctx.internalDiagnostics!.onEvent!;
 
       unsubscribe = subscribe((evt: DiagnosticEventPayload, metadata: DiagnosticEventMetadata) => {
         try {
@@ -2487,19 +2509,19 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
           }
         } catch (err) {
           ctx.logger.error(
-            `diagnostics-otel: event handler failed (${evt.type}): ${formatError(err)}`,
+            `openclaw-otel: event handler failed (${evt.type}): ${formatError(err)}`,
           );
         }
       });
 
       emitForSignals(enabledSignals, {
-        exporter: "diagnostics-otel",
+        exporter: "openclaw-otel",
         status: "started",
         reason: "configured",
       });
 
       if (logsEnabled) {
-        ctx.logger.info("diagnostics-otel: logs exporter enabled (OTLP/Protobuf)");
+        ctx.logger.info("openclaw-otel: logs exporter enabled (OTLP/Protobuf)");
       }
     },
     async stop() {
