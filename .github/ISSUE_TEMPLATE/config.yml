@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/ericmey/openclaw-otel/discussions
+    about: For questions, design discussions, and "is this how I'm supposed to use it?" please use Discussions, not Issues.

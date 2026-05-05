@@ -3,6 +3,9 @@ name: ci
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - '.release-please-manifest.json'
   pull_request:
     branches: [main]
 

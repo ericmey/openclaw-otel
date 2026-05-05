@@ -1,0 +1,53 @@
+name: Bug report
+description: A signal looks wrong or the plugin behaves unexpectedly
+labels: [bug]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: What you observed
+      description: The actual field shape, label set, log line, or metric name you saw — ideally with a Grafana query / curl output / screenshot.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What the signal should look like per OTel semantic conventions or the field-shape contract in the README.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Minimal steps. If it requires a specific OpenClaw config or event, paste the relevant block.
+    validations: { required: true }
+  - type: input
+    id: plugin-version
+    attributes:
+      label: openclaw-otel version
+      placeholder: "1.0.0"
+    validations: { required: true }
+  - type: input
+    id: openclaw-version
+    attributes:
+      label: openclaw version
+    validations: { required: true }
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+    validations: { required: true }
+  - type: input
+    id: stack
+    attributes:
+      label: OTel collector / backend versions
+      description: e.g. Loki 3.3.2, Tempo 2.7.0, Mimir 2.14.3, OTel Collector 0.117.0, Grafana 11.4.0
+  - type: input
+    id: os
+    attributes:
+      label: Host OS
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / errors
+      description: Plugin-side errors, openclaw gateway stderr, or OTel collector logs that mention this plugin.
+      render: shell
