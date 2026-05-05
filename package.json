@@ -1,6 +1,6 @@
 {
   "name": "openclaw-otel",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "OpenTelemetry exporter for OpenClaw — ships diagnostic events as OTel logs, metrics, and traces with field shapes that work cleanly in Grafana / LGTM stacks.",
   "license": "MIT",
   "author": "Eric Mey <ericmey@gmail.com>",

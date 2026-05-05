@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/ericmey/openclaw-otel/compare/v0.1.0...v1.0.0) (2026-05-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* 1.0.0 stable. Plugin contract surface is now stable; future breaking changes follow semver. Consumers on Node <22.14 must upgrade. Consumers on openclaw <2026.5.4 must upgrade or stay on 0.1.x.
+
+### Features
+
+* prepare 1.0.0 stable release ([#9](https://github.com/ericmey/openclaw-otel/issues/9)) ([0ca12ac](https://github.com/ericmey/openclaw-otel/commit/0ca12ac386bf1b42b349f00bfe3812035058da4c))
+
+
+### Bug Fixes
+
+* address all 5 Codex review findings ([#7](https://github.com/ericmey/openclaw-otel/issues/7)) ([7d0caca](https://github.com/ericmey/openclaw-otel/commit/7d0caca44982c0b430e4c282f7aabed007785d5d))
+* **deps:** force uuid &gt;=14 via npm overrides to clear CVE ([#5](https://github.com/ericmey/openclaw-otel/issues/5)) ([c862499](https://github.com/ericmey/openclaw-otel/commit/c862499da9df94197508909c34da0ca16e918ff4))
+* **F1.3:** drop misleading code.function/code.lineno attributes ([872ec50](https://github.com/ericmey/openclaw-otel/commit/872ec5052e5fc46f11f74014031a60a07103e206))
+* **F1.4 + F1.2:** explicit resource, disable NodeSDK auto-detect ([c9e6b9c](https://github.com/ericmey/openclaw-otel/commit/c9e6b9c1c88aa18aad4add00bfb65e4ab9ce342e))
+* **F1.5:** drop double-suffix _ms_milliseconds on histograms ([4803e5e](https://github.com/ericmey/openclaw-otel/commit/4803e5ec7065b6a558bdf594bd556835398c75a3))
+* **F1.6:** drop redundant openclaw.log.level log attribute ([fe6e433](https://github.com/ericmey/openclaw-otel/commit/fe6e433ae4a073f16cbc2ae43534981d47e7d20a))
+* **F1.7:** inject trace_id/span_id on log records when in span scope ([b24ed24](https://github.com/ericmey/openclaw-otel/commit/b24ed241ba9ad20138a3bfeb2dad9573d4f31beb))
+
 ## [Unreleased]
 
 ### Added
