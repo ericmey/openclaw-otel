@@ -51,7 +51,7 @@
     "SECURITY.md"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.14.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -98,11 +98,14 @@
       "minHostVersion": ">=2026.5.2"
     },
     "compat": {
-      "pluginApi": ">=2026.5.2"
+      "pluginApi": ">=2026.5.4"
     },
     "release": {
       "publishToClawHub": false,
-      "publishToNpm": false
+      "publishToNpm": true
+    },
+    "build": {
+      "openclawVersion": "2026.5.4"
     }
   },
   "overrides": {
