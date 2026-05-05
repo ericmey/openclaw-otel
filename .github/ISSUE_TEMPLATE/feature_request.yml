@@ -1,0 +1,25 @@
+name: Feature request
+description: A capability or field-shape change you want from the plugin
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The user-facing goal — "I want to query X in Grafana" or "I want the plugin to capture Y."
+    validations: { required: true }
+  - type: textarea
+    id: gap
+    attributes:
+      label: Why the current shape doesn't support it
+      description: What you tried, what was missing, what didn't work.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: If you have a specific design in mind, sketch it. New config option? New label? New event handling?
+  - type: textarea
+    id: context
+    attributes:
+      label: OTel / OpenClaw context
+      description: Relevant OTel semantic conventions or OpenClaw plugin SDK APIs that bear on this. Links welcome.
